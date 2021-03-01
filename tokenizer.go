@@ -3,6 +3,7 @@ package gosc
 import (
 	"bufio"
 	"io"
+	"unicode"
 )
 
 type Token struct {
@@ -33,16 +34,43 @@ func (t *Tokenizer) ungetc(c rune) {
 	t.runeBuf = append(t.runeBuf, c)
 }
 
-func (t *Tokenizer) NextToken() (Token, error) {
-    for {
-        c, err := t.getc()
-        if err == io.EOF {
-            return Token{EOFToken, t.lineno, t.column}, nil
-        }
-        if err != nil {
-            return 0, nil
-        }
-    }
+type tokenState int
+
+const (
+	invalidState tokenState = iota
+	initialState
+	commentState
+	postSharpState
+	regionCommentState
+	symbolState
+	stringState
+)
+
+func (t *Tokenizer) NextToken() (token Token, retErr error) {
+	state := initialState
+
+	for {
+		c, err := t.getc()
+		if err == io.EOF {
+			token.Tag = EOFToken
+			token.Lineno = t.lineno
+			token.Column = t.column
+			return
+		}
+		if err != nil {
+			retErr = err
+			return
+		}
+
+		switch state {
+		case initialState:
+			if unicode.IsSpace(c) {
+				// do nothing
+			} else if c == ';' {
+				state = commentState
+			} else if c == '#' {
+				state = postSharpState
+			}
+		}
+	}
 }
-
-
