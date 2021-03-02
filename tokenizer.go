@@ -2,8 +2,9 @@ package gosc
 
 import (
 	"bufio"
+	"fmt"
 	"io"
-	"unicode"
+	"regexp"
 )
 
 type Token struct {
@@ -14,12 +15,36 @@ type Token struct {
 }
 
 type Tokenizer struct {
-	src     *bufio.Reader
-	lineno  int
-	column  int
-	runeBuf []rune
+	src    io.Reader
+	lineno int
+	column int
+	// runeBuf []rune
 }
 
+func NewTokenizer(src io.Reader) *Tokenizer {
+	return &Tokenizer{src: src}
+}
+
+func (t *Tokenizer) scan() error {
+	scanner := bufio.NewScanner(t.src)
+	t.lineno = 1
+	t.column = 1
+	for scanner.Scan() {
+		fmt.Println(scanner.Text())
+		t.lineno++
+	}
+	return scanner.Err()
+}
+
+var spacesRe = regexp.MustCompile(`\A\s+`)
+
+func scanInitial(t *Tokenizer, src string) {
+	switch {
+	case spacesRe.MatchString(src):
+	}
+}
+
+/*
 func (t *Tokenizer) getc() (c rune, err error) {
 	if len(t.runeBuf) > 0 {
 		c = t.runeBuf[len(t.runeBuf)-1]
@@ -106,3 +131,4 @@ func (t *Tokenizer) NextToken() (token Token, retErr error) {
 		}
 	}
 }
+*/
