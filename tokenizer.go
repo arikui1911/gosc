@@ -42,12 +42,16 @@ const (
 	commentState
 	postSharpState
 	regionCommentState
+	postRegionCommentSharpState
 	symbolState
 	stringState
+	atomState
 )
 
 func (t *Tokenizer) NextToken() (token Token, retErr error) {
 	state := initialState
+	buf := []rune{}
+	regionCommentNests := 0
 
 	for {
 		c, err := t.getc()
@@ -65,12 +69,40 @@ func (t *Tokenizer) NextToken() (token Token, retErr error) {
 		switch state {
 		case initialState:
 			if unicode.IsSpace(c) {
-				// do nothing
+				continue
 			} else if c == ';' {
 				state = commentState
+				continue
 			} else if c == '#' {
 				state = postSharpState
+				continue
 			}
+		case commentState:
+			if c == '\n' {
+				state = initialState
+			}
+		case postSharpState:
+			if c == '|' {
+				state = regionCommentState
+				regionCommentNests++
+				continue
+			}
+			buf = append(buf, '#')
+			buf = append(buf, c)
+			state = atomState
+		case regionCommentState:
+			if c == '#' {
+				state = postRegionCommentSharpState
+			}
+		case postRegionCommentSharpState:
+			if c == '|' {
+				regionCommentNests--
+				if regionCommentNests == 0 {
+					state = initialState
+					continue
+				}
+			}
+			state = regionCommentState
 		}
 	}
 }
