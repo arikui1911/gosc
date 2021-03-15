@@ -1,8 +1,10 @@
-package gosc
+package gosc_test
 
 import (
-	"strings"
+	"fmt"
 	"testing"
+
+	"github.com/arikui1911/gosc"
 )
 
 func TestTokenizer(t *testing.T) {
@@ -11,5 +13,29 @@ hoge
 hogeeee
 foo
 	`
-	NewTokenizer(strings.NewReader(src)).scan()
+	tr := gosc.NewTokenizer(src)
+	tok, err := tr.NextToken()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(tok)
+	}
+	tok, err = tr.NextToken()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(tok)
+	}
+	tok, err = tr.NextToken()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(tok)
+	}
+	tok, err = tr.NextToken()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(tok)
+	}
 }

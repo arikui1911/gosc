@@ -21,12 +21,14 @@ type Tokenizer struct {
 	errCh   chan error
 }
 
-func NewTokenizer(src string) *Tokenizer {
-	return &Tokenizer{
+func NewTokenizer(src string) (t *Tokenizer) {
+	t = &Tokenizer{
 		src:     src,
 		tokenCh: make(chan Token),
 		errCh:   make(chan error),
 	}
+	go scanLoop(t)
+	return
 }
 
 func (t *Tokenizer) NextToken() (tok Token, err error) {
@@ -35,6 +37,20 @@ func (t *Tokenizer) NextToken() (tok Token, err error) {
 	case err = <-t.errCh:
 	}
 	return
+}
+
+type scanFn func(*Tokenizer, *strscan.StringScanner) scanFn
+
+// scanLoop nerver ends. DO NOT call without goroutine.
+func scanLoop(t *Tokenizer) {
+	fn := scanDefault
+	s := strscan.New(t.src)
+	for !s.IsEOF() {
+		fn = fn(t, s)
+	}
+	for {
+		emit(t, s, EOFToken, "", s.Pos())
+	}
 }
 
 func emit(t *Tokenizer, s *strscan.StringScanner, tag TokenTag, val string, begPos int) {
@@ -54,20 +70,17 @@ var charsTable = map[string]TokenTag{
 	"'": QuoteToken,
 }
 
-func scan(t *Tokenizer) error {
-	s := strscan.New(t.src)
-	for !s.IsEOF() {
-		p := s.Pos()
-		switch {
-		case s.Scan(spacesRe):
-			continue
-		case s.Scan(charsRe):
-			emit(t, s, charsTable[s.Matched()], s.Matched(), p)
-		case s.Scan(atomRe):
-			emit(t, s, AtomToken, s.Matched(), p)
-		default:
-			panic("must not happen")
-		}
+func scanDefault(t *Tokenizer, s *strscan.StringScanner) scanFn {
+	p := s.Pos()
+	switch {
+	case s.Scan(spacesRe):
+		// do nothing
+	case s.Scan(charsRe):
+		emit(t, s, charsTable[s.Matched()], s.Matched(), p)
+	case s.Scan(atomRe):
+		emit(t, s, AtomToken, s.Matched(), p)
+	default:
+		panic("must not happen")
 	}
-	return nil
+	return scanDefault
 }
